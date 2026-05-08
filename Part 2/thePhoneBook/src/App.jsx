@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import phoneService from './services/phones'
 
 const App = () => {
   const hook = () => {
     console.log('effect')
-    axios.get('http://localhost:3001/persons')
-      .then(response => {
-        console.log('promise fulfilled')
-        setPersons(response.data)
-      })
+    phoneService.getAll()
+      .then(initialPersons => {
+      setPersons(initialPersons)
+  })
   } 
 
   useEffect(hook, [])
@@ -33,25 +32,48 @@ const App = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault()
-    const newPerson = { name: newName, number: newNumber, id: persons.length + 1 }
-    if (persons.some(person => person.name === newName)) {
-      alert(`${newName} is already added to phonebook`)
+      const newPerson = {
+        name: newName,
+        number: newNumber
+      }    
+      if (persons.some(person => person.name === newName)) {
+      window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`) &&
+      phoneService.update(persons.find(p => p.name === newName).id, { ...newPerson, number: newNumber })
+        .then(updatedPerson => {
+          setPersons(
+          persons.map(p =>
+          p.id !== updatedPerson.id ? p : updatedPerson
+        )
+    )
+})
       return
     }
-    setPersons(persons.concat(newPerson))
-    setNewName('') 
-    setNewNumber('') 
+    phoneService.create(newPerson)
+      .then(response => {
+        setPersons(persons.concat(response))
+        setNewName('') 
+        setNewNumber('') 
+      })
   }
 
   const handleSearch = (event) => {
     setSearch(event.target.value)
   }
 
+  const handleDelete = (id) => {
+    if (window.confirm(`Delete ${persons.find(p => p.id === id).name}?`)) {
+      phoneService.remove(id)
+        .then(response => {
+          setPersons(persons.filter(p => p.id !== id))
+        })
+    }
+  }
+
   return (
     <>
     <h2>Phonebook</h2>
     <input placeholder='search...' value={search} onChange={handleSearch} />
-    <form>
+    <form onSubmit={handleSubmit}>
       <div>
         name: <input value={newName} onChange={handleNameChange}/>
       </div>
@@ -59,13 +81,16 @@ const App = () => {
         number: <input value={newNumber} onChange={handleNumberChange} />
       </div>
       <div>
-        <button type="submit" onClick={handleSubmit}>add</button>
+        <button type="submit" >add</button>
       </div>
     </form>
     <h2>Numbers</h2>
     <ul>
       {personsToShow.map(person => ( 
-        <li key={person.id}>{person.name} {person.number}</li>
+        <li key={person.id}>
+          {person.name} {person.number}
+          <button onClick = {() => handleDelete(person.id)}>delete</button>
+        </li>
       ))}
     </ul>
     </>
