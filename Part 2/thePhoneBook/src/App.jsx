@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import phoneService from './services/phones'
+import Notification from './components/Notifications'
+import Footer from './components/Footer'
 
 const App = () => {
   const hook = () => {
@@ -16,10 +18,31 @@ const App = () => {
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [search, setSearch] = useState('')
+  const [errorMessage, setErrorMessage] = useState(null)
 
   const handleNameChange = (event) => {
     setNewName(event.target.value)
 
+  }
+
+  const toggleImportanceOf = id => {
+    const person = persons.find(p => p.id === id)
+    const changedPerson = { ...person, important: !person.important }
+
+    phoneService
+    .update(id, changedPerson).then(returnedNote => {
+      setPersons(persons.map(note => note.id !== id ? note : returnedNote))
+    })
+
+    .catch(error => {
+      setErrorMessage(
+        `Note '${person.content}' was already removed from server`
+      )
+      setTimeout(() => {
+        setErrorMessage(null)
+      }, 5000)
+      setPersons(persons.filter(n => n.id !== id))
+    })
   }
 
   const handleNumberChange = (event) => {
@@ -54,6 +77,10 @@ const App = () => {
         setNewName('') 
         setNewNumber('') 
       })
+      setErrorMessage(`Added ${newName}`)
+       setTimeout(() => {
+        setErrorMessage(null)
+      }, 5000)
   }
 
   const handleSearch = (event) => {
@@ -71,6 +98,8 @@ const App = () => {
 
   return (
     <>
+    <h1>Notes</h1>
+    <Notification message={errorMessage} />
     <h2>Phonebook</h2>
     <input placeholder='search...' value={search} onChange={handleSearch} />
     <form onSubmit={handleSubmit}>
@@ -93,6 +122,7 @@ const App = () => {
         </li>
       ))}
     </ul>
+    <Footer />
     </>
   )
 }
